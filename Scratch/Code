@@ -196,7 +196,12 @@ print(Y_test)
 
 ###################Prediction########################
 i = 0 #Index for which you want weights to be used. It is decided from Y_train as 0 trained weights are only used for X_test corresponding to 0s.
-Z2, Z3, Z4, Z5, A2,A3,A4,A5 = forward_prop(W1[i],W2[i],W3[i],W4[i],b1[i],b2[i],b3[i],b4[i],X_test[i])
+# i can have values from 0 to 15 and mind that those values are only used for corresponding weights i.e., all values of Y_train with 0s correspond to weights and Biases optimal values
+# and corresponding values from 0 to 15 can be choosen based on that corresponding to index having 0s only.
+# The same among j will be choosed i.e., only 0s' indices.
+# One index at a time
+j=0 # THis index varies from 0 to 3 only based on X_test and Y_test which has only 4 images and labels
+Z2, Z3, Z4, Z5, A2,A3,A4,A5 = forward_prop(W1[i],W2[i],W3[i],W4[i],b1[i],b2[i],b3[i],b4[i],X_test[j])
       
 
 correct=0
