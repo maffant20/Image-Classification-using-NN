@@ -1,1 +1,73 @@
 
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import linear_model
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+import skimage.io as io
+from sklearn.utils import shuffle
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn import metrics
+from mlxtend.plotting import plot_confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split
+
+import os
+import glob
+import cv2
+from PIL import Image
+
+
+from google.colab import drive
+
+drive.mount('/content/gdrive')
+
+path = '/content/gdrive/MyDrive/DL Assignment 3/Training Set/'
+resized_path = '/content/gdrive/MyDrive/DL Assignment 3/Resized Training Set'
+
+images = [] 
+i=0
+
+img_names = [ path + str(img_number) + ".jpg"  for img_number in range(1,21)] 
+for  imag in img_names: 
+  img2 = cv2.imread(imag)
+  img3 = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
+  img4 = cv2.resize(img3,(50,50), interpolation=cv2.INTER_AREA) # Image Resizing
+  img5 = np.array(img4)
+  images.append(img5)
+images2 = np.zeros((20,2500))
+for i in range(20):
+  images[i] = images[i].flatten()
+  images2[i] = images[i]
+print(images)
+print(images2)
+
+
+label0 = np.zeros((10,1))
+label1 = np.ones((10,1))
+labels = np.concatenate((label0,label1),axis=0)
+labels.shape
+
+X_train, X_test, Y_train, Y_test = train_test_split(images2, labels, test_size = 0.2, stratify = labels, random_state = 2)
+learning = MLPClassifier(hidden_layer_sizes=(50,50,50), activation='relu', solver='adam', max_iter=1000)
+learning.fit(X_train,Y_train)
+
+Training_Prediction = learning.predict(X_train)
+
+Testing_Prediction = learning.predict(X_test)
+
+
+print(classification_report(Y_train ,Training_Prediction))
+
+print(classification_report(Y_test ,Testing_Prediction))
+
+
+
+
+
+
+
+
+
