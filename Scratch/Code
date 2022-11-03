@@ -1,1 +1,209 @@
 
+import cv2
+import numpy as np
+from google.colab import drive
+
+drive.mount('/content/gdrive')
+images = [] 
+i=0
+path = '/content/gdrive/MyDrive/DL Assignment 3/Training Set/'
+img_names = [ path + str(img_number) + ".jpg"  for img_number in range(1,21)] 
+for  imag in img_names: 
+  img2 = cv2.imread(imag)
+  img3 = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
+  img4 = cv2.resize(img3,(10,10), interpolation=cv2.INTER_AREA) # Image Resizing
+  img5 = np.array(img4)
+  images.append(img5)
+images2 = np.zeros((20,100))
+for i in range(20):
+  images[i] = images[i].flatten()
+  images2[i] = images[i]
+print(images)
+print(images2)
+
+for i in range(images2.shape[0]):
+   images2[i] = (images2[i] - np.mean(images2[i]))/np.std(images2[i])
+  
+
+label0 = np.zeros((10,100))
+label1 = np.ones((10,100))
+labels = np.concatenate((label0,label1),axis=0)
+labels.shape
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, Y_train, Y_test = train_test_split(images2, labels, test_size = 0.2, stratify = labels, random_state = 2)
+
+
+
+def Relu(x):
+     #This function has a unique property that is is piecewise linear i.e., it is linear for the positive half and 0 for the other half
+    return np.maximum(x,0)
+# Derivative of ReLU function for use in backward propogation
+def der_relu(x):
+    # Derivative of Relu is the 1 for the positive half and 0 for the negative half. It returns the same value for values of input larger than 0
+    # with maintaining the float datatype.
+    return np.array(x>0, dtype = np.float32)
+#Sigmoid/Logistic function
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
+
+
+def params():
+    # Always initializes parameters to fixed random values instead of changing them always.
+    np.random.seed(10)
+    # Input layer has 100 features and first hidden layer has 100 units so W1 parameter matrix has dimensions 100 x 100.
+    W1 = np.random.randn(100,100)
+    # 100 x 1 bias unit parameters for 100 hidden layer neurons as each neuron connects bias unit to each neuron in hidden layer.
+    b1 = np.random.randn(100,1)
+    # Second hidden layer has 100 neurons so W2 parameter matrix has dimensions 100 x 100.
+    W2 = np.random.randn(100,100)
+    # 100 x 1 bias unit parameters for 100 hidden layer neurons as each neuron connects bias unit to each neuron in hidden layer.     
+    b2 = np.random.randn(100,1)
+    # Third hidden layer has 100 neurons so W2 parameter matrix has dimensions 100 x 100.
+    W3 = np.random.randn(100,100)
+    # 100 x 1 bias unit parameters for 100 hidden layer neurons as each neuron connects bias unit to each neuron in hidden layer.   
+    b3 = np.random.randn(100,1)
+    # Output layer has 1 neuron as it is a binary classification problem so each neuron in the 2nd hidden layer leads its weights to the 
+    # single neuron which leads to 1 x 100 W3 parameter matrix.    
+    W4 = np.random.randn(1,100)
+    # 1 bias unit parameter for 1 neuron of output layer.
+    b4 = np.random.randn(1)[0]
+    
+    return W1,W2,W3,W4,b1,b2,b3,b4
+
+def forward_prop(W1,W2,W3,W4,b1,b2,b3,b4,X):
+    A1 = X
+    Z2 = W1.dot(A1) + b1
+    A2 = Relu(Z2)
+    Z3 = W2.dot(A2) + b2
+    A3 = Relu(Z3)
+    Z4 = W3.dot(A3) + b3
+    A4 = Relu(Z4)
+    Z5 = W4.dot(A4) + b4
+    A5 = sigmoid(Z5)
+    # print('Z2 shape', Z2.shape)
+    # print('Z3 shape', Z3.shape)
+    # print('Z4 shape', Z4.shape)
+    # print('Z5 shape', Z5.shape)
+    # print('A1 shape', A1.shape)
+    # print('A2 shape', A2.shape)
+    # print('A3 shape', A3.shape) 
+    # print('A4 shape', A4.shape)   
+    # print('A5 shape', A5.shape)
+    #A4 is the hypothesis of our neural network which is return along with other calculated activations.
+    return Z2, Z3, Z4, Z5, A2,A3,A4, A5 
+  
+  def Cost_function(W1,W2,W3,W4,A5,Y,X,lam):
+    epsilon = 1e-5
+    m = X.shape[0]
+    Jt = -(1/m) * np.sum(Y*np.log(A5+epsilon) + (1-Y)*np.log(1-A5+epsilon)) 
+    #Regularization applied on all parameters between all layers
+    L2 = ((lam/(2*m))* (np.sum(np.square(W1)) + np.sum(np.square(W2)) + np.sum(np.square(W3)) + np.sum(np.square(W4))))        
+    J = Jt + L2
+     
+    return J
+
+def backprop(Z2,A2,Z3,Z4,A3,A4,A5,W1,W2,W3,W4,X,Y, lam):
+    m = X.shape[0]
+     #Error in output layer is just the difference of hypothesis and ground truth.
+    dZ5 = A5 - Y
+    dW4 = 1/m * dZ5.dot(A4.T) + (lam/m) *(W4)
+    dB4 = 1/m * np.sum(dZ5, keepdims= True)
+    
+    dZ4 = W4.T.dot(dZ5) * der_relu(Z4)
+    #Derivative of cost function with respect to Parameter matrix and bias value between 3rd and 4th layer
+    dW3 = 1/m * dZ4.dot(A3.T) + (lam/m)*(W3)
+    dB3 = 1/m * np.sum(dZ4, keepdims= True)
+    #Error in 3rd layer calculated using product of local gradient of third layer which is derivative of relu of Z3 multiplied with global 
+    # gradient which is error of output layer 
+    dZ3 = W3.T.dot(dZ4) *der_relu(Z3)
+    #Derivative of cost function with respect to Parameter matrix and bias vector between 2nd and 3rd layer   
+    dW2 = 1/m * dZ3.dot(A2.T) + (lam/m)*(W2)
+    dB2 = 1/m * np.sum(dZ3,  keepdims= True)
+    #Error in 2nd layer calculated using product of local gradient of second layer which is derivative of relu of Z2 multiplied with global 
+    # gradient which is error of third layer 
+    dZ2 = W2.T.dot(dZ3) *der_relu(Z2)
+    #Derivative of cost function with respect to Parameter matrix and bias vector between 1st and 2nd layer
+    dW1 = 1/m * dZ2.dot(X.T) + (lam/m)*(W1)
+    dB1 = 1/m * np.sum(dZ2, keepdims= True)
+    # The gradients of backpropogation are returned for use in updating parameters and gradient checking.
+    return dW1,dW2,dW3,dW4,dB1,dB2,dB3,dB4
+
+
+#Parameters are updated by using the derivatives calculated from backpropogation and learning rate alpha.
+def update_params(W1,W2,W3,W4,b1,b2,b3,b4,dW1,dW2,dW3,dW4,dB1,dB2,dB3,dB4,alpha):
+    W1 = W1 - alpha*dW1
+    b1 = b1 - alpha*dB1
+    W2 = W2 - alpha*dW2
+    b2 = b2 - alpha*dB2
+    W3 = W3 - alpha*dW3
+    b3 = b3 - alpha*dB3
+    W4 = W4 - alpha * dW4
+    b4 = b4 - alpha * dB4
+    # The updated parameters are returned back.
+    return W1,W2,W3,W4,b1,b2,b3,b4
+
+    
+print(X_train.shape)
+print(Y_train.shape)
+print(X_test.shape)
+print(Y_test.shape)
+
+def gradient_descent():
+  W1_optimal = []
+  b1_optimal = []
+  W2_optimal = []
+  b2_optimal = []
+  W3_optimal = []
+  b3_optimal = []
+  W4_optimal = []
+  b4_optimal = []
+  Optimal_Cost = []
+  J_t = np.zeros((2000,1))
+  for j in range(16):
+    W1,W2,W3,W4,b1,b2,b3,b4 = params()
+    for i in range(2000):
+
+      
+      Z2, Z3, Z4, Z5, A2,A3,A4,A5 = forward_prop(W1,W2,W3,W4,b1,b2,b3,b4,X_train[j])
+      J = Cost_function(W1,W2,W3,W4,A5,Y_train[j],X_train[j],0.8)
+      J_t[i] = J
+      print('J=', J)
+      dW1,dW2,dW3,dW4,dB1,dB2,dB3,dB4 = backprop(Z2,A2,Z3,Z4,A3,A4,A5,W1,W2,W3,W4,X_train[j],Y_train[j],0.8)
+      W1,W2,W3,W4,b1,b2,b3,b4 = update_params(W1,W2,W3,W4,b1,b2,b3,b4,dW1,dW2,dW3,dW4,dB1,dB2,dB3,dB4,0.6)
+    W1_optimal.append(W1)
+    W2_optimal.append(W2)
+    W3_optimal.append(W3)
+    W4_optimal.append(W4)
+    b1_optimal.append(b1)
+    b2_optimal.append(b2)
+    b3_optimal.append(b3)
+    b4_optimal.append(b4)
+    Cost = np.argmin(J_t)
+    Optimal_Cost.append(Cost)
+  return W1_optimal,W2_optimal,W3_optimal,W4_optimal,b1_optimal,b2_optimal,b3_optimal,b4_optimal,Optimal_Cost
+
+
+W1,W2,W3,W4,b1,b2,b3,b4,Cost = gradient_descent()
+
+for i in range(16):
+  print(Y_train[i])
+  
+print(Y_test)
+
+
+
+###################Prediction########################
+i = 0 #Index for which you want weights to be used. It is decided from Y_train as 0 trained weights are only used for X_test corresponding to 0s.
+Z2, Z3, Z4, Z5, A2,A3,A4,A5 = forward_prop(W1[i],W2[i],W3[i],W4[i],b1[i],b2[i],b3[i],b4[i],X_test[i])
+      
+
+correct=0
+for i in range(100):
+  if A5[0][i]-Y_test[1][i] < 0.001 or A5[0][i]-Y_test[1][i] > -0.001 :
+    correct = correct + 1
+acc = correct/Y_test[1].shape[0] * 100
+print('Accuracy = ', acc)
+
+
